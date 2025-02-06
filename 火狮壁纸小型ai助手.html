@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 聊天</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #292929;
+            overflow: hidden; /* 禁止页面滚动 */
+        }
+        .chat-container {
+            width: 90%;
+            max-width: 500px;
+            background: rgb(83, 83, 83);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 80vh; /* 固定高度 */
+        }
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto; /* 添加独立滚动条 */
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            scrollbar-width: thin; /* 兼容 Firefox */
+            scrollbar-color: #888 #f4f4f4;
+        }
+        .chat-box::-webkit-scrollbar {
+            width: 6px; /* 滚动条宽度 */
+        }
+        .chat-box::-webkit-scrollbar-track {
+            background: #f4f4f4;
+        }
+        .chat-box::-webkit-scrollbar-thumb {
+            background: #b4b4b4;
+            border-radius: 3px;
+        }
+        .chat-box p {
+            margin: 5px 0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            max-width: 70%;
+            word-wrap: break-word;
+            display: inline-block;
+        }
+        .user-message {
+            background: #88d3c9;
+            color: rgb(38, 38, 38);
+            text-align: right;
+            align-self: flex-end;
+        }
+        .ai-message {
+            background: #323232;
+            color: rgb(222, 222, 222);
+            text-align: left;
+            align-self: flex-start;
+        }
+        .typing-img {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            animation: move 1s infinite; /* 添加平滑移动动画 */
+        }
+        @keyframes move {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
+        }
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
+            background: #6e6e6e;
+        }
+        .button-container button {
+            padding: 6px 12px;
+            background: #c8d0d2;
+            color: rgb(57, 57, 57);   
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .button-container button:hover {
+            background: #838383;
+            color: #ffffff;
+        }
+        .input-container {
+            display: flex;
+            border-top: 1px solid #838383;
+            padding: 10px;
+            background: rgb(100, 100, 100);
+        }
+        input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+        }
+        button {
+            margin-left: 10px;
+            padding: 8px 12px;
+            background: #333333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1b1b1b;
+        }
+        h1 {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    text-align: center;
+    background-color: #2e2e2ee2; /* 背景色让它更明显 */
+    color: #d4d4d4;
+    padding: 10px 0;
+    margin: 0;
+    font-size: 20px;
+}
+
+    </style>
+</head>
+<body>
+<h1 style="color: #b4b4b4;">火狮 HUOSHI 壁纸网站 小型AI助手</h1>
+<br><br>
+<div class="chat-container">
+    <div class="chat-box" id="chat-box">
+        <p class="ai-message"><b>火狮 小型AI助手：</b> 有什么可以帮忙的吗？</p>
+    </div>
+    
+    <!-- 快捷按钮 -->
+    <div class="button-container" id="button-container">
+        <button onclick="quickReply(this, '怎么下载壁纸')">怎么弄</button>
+        <button onclick="quickReply(this, '我需要帮助')">帮助</button>
+        <button onclick="quickReply(this, '加载不了')">加载不出来</button>
+        <button onclick="quickReply(this, '我需要联系作者')">联系</button>
+    </div>
+
+    <div class="input-container">
+        <input type="text" id="user-input" placeholder="请输入...">
+        <button onclick="sendMessage()">发送</button>
+    </div>
+</div>
+
+<script>
+    const chatBox = document.getElementById("chat-box");
+    const userInput = document.getElementById("user-input");
+
+    // 关键词和AI回复
+    const responses = {
+        "你好": ["你好！很高兴见到你。请问有什么可以帮助您的吗?(＾▽＾)", "嘿！有什么需要帮助的事情吗", "嗨嗨！今天过得如何？", "你好呀！需要帮助吗？"],
+
+        "我需要帮助": ["以下是可以帮助你设置壁纸的方法：如果按下下载按钮后没有出现下载的情况，电脑可以使用按下鼠标的右键选项里按下 <另存为> 这样电脑就能够下载保存到原壁纸了，如果是手机的话可以长按你想要下载的动态壁纸或图片壁纸，长按后会显示下载选项点击下载即可。-----如果不会的话 可以回复一个 <更详细点>", "以下是详细的壁纸下载与设置方法：  如果点击下载按钮后没有成功下载，可以根据设备类型尝试以下操作：  电脑端 将鼠标移动到想要下载的壁纸上。 <右键点击> 壁纸，弹出菜单。 在菜单中选择 <另存为> 或 <图片另存为> 选项。 选择存储位置（如<桌面>或<图片>文件夹），然后点击 <保存>。 下载完成后，找到刚保存的壁纸，在文件上 <右键点击>，选择 <设置为桌面背景>，即可更换壁纸。 手机端（iOS/安卓） <长按> 需要下载的壁纸，直到弹出选项菜单。 选择 <下载> 或 <保存图片>（iPhone 可能会显示 <添加到照片>）。 下载完成后，打开手机的 <相册/图库>，找到刚下载的壁纸。 iPhone 设置壁纸： 打开 <设置> > 进入 <墙纸> > 选择 <添加新墙纸> > 选择下载的壁纸 > 调整并设置。 安卓设置壁纸： 在相册中打开壁纸，点击右上角的 <菜单>（通常是<三点>图标），选择 <设为壁纸>，然后按照提示完成设置。 这样，你就可以成功下载并设置你喜欢的壁纸了！"],
+
+        "帮助": ["以下是可以帮助你设置壁纸的方法：如果按下下载按钮后没有出现下载的情况，电脑可以使用按下鼠标的右键选项里按下 <另存为> 这样电脑就能够下载保存到原壁纸了，如果是手机的话可以长按你想要下载的动态壁纸或图片壁纸，长按后会显示下载选项点击下载即可。-----如果不会的话 可以回复一个 <更详细点>", "以下是详细的壁纸下载与设置方法：  如果点击下载按钮后没有成功下载，可以根据设备类型尝试以下操作：  电脑端 将鼠标移动到想要下载的壁纸上。 <右键点击> 壁纸，弹出菜单。 在菜单中选择 <另存为> 或 <图片另存为> 选项。 选择存储位置（如<桌面>或<图片>文件夹），然后点击 <保存>。 下载完成后，找到刚保存的壁纸，在文件上 <右键点击>，选择 <设置为桌面背景>，即可更换壁纸。 手机端（iOS/安卓） <长按> 需要下载的壁纸，直到弹出选项菜单。 选择 <下载> 或 <保存图片>（iPhone 可能会显示 <添加到照片>）。 下载完成后，打开手机的 <相册/图库>，找到刚下载的壁纸。 iPhone 设置壁纸： 打开 <设置> > 进入 <墙纸> > 选择 <添加新墙纸> > 选择下载的壁纸 > 调整并设置。 安卓设置壁纸： 在相册中打开壁纸，点击右上角的 <菜单>（通常是<三点>图标），选择 <设为壁纸>，然后按照提示完成设置。 这样，你就可以成功下载并设置你喜欢的壁纸了！"],
+       
+        "加载": ["如果加载不出来 可能由以下原因：本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。", "本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。但是可以确认以下您的网络或者稍微等1-2分钟。"],
+        
+        "进不了": ["如果加载不出来 可能由以下原因：本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。", "本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。但是可以确认以下您的网络或者稍微等1-2分钟。"],
+
+        "进不": ["如果加载不出来 可能由以下原因：本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。", "本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。但是可以确认以下您的网络或者稍微等1-2分钟。"],
+        
+        "进不去": ["本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。", "本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。但是可以确认以下您的网络或者稍微等1-2分钟。"],
+
+        "为什么": ["本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。", "本网站在国内可能会出现无法加载的情况，因为外网可能在国内受限制网速可能变慢，但是一般是能够正常打开和保存壁纸的。但是可以确认以下您的网络或者稍微等1-2分钟。"],
+      
+        "怎么弄": ["以下是可以帮助你设置壁纸的方法：如果按下下载按钮后没有出现下载的情况，电脑可以使用按下鼠标的右键选项里按下 <另存为> 这样电脑就能够下载保存到原壁纸了，如果是手机的话可以长按你想要下载的动态壁纸或图片壁纸，长按后会显示下载选项点击下载即可。-----如果不会的话 可以回复一个 <更详细点>", "以下是可以帮助你设置壁纸的方法: 如果点击下载按钮后未能成功下载，可以尝试以下操作：  电脑端：右键点击图片，在弹出的菜单中选择<另存为>，即可将壁纸下载并保存到本地。 手机端：长按想要下载的动态壁纸或图片壁纸，待弹出菜单后选择<下载>，即可保存至设备。-----如果不会的话 可以回复一个 <更详细点>"],
+       
+        "怎么":  ["以下是详细的壁纸下载与设置方法：  如果点击下载按钮后没有成功下载，可以根据设备类型尝试以下操作：  电脑端 将鼠标移动到想要下载的壁纸上。 <右键点击> 壁纸，弹出菜单。 在菜单中选择 <另存为> 或 <图片另存为> 选项。 选择存储位置（如<桌面>或<图片>文件夹），然后点击 <保存>。 下载完成后，找到刚保存的壁纸，在文件上 <右键点击>，选择 <设置为桌面背景>，即可更换壁纸。 手机端（iOS/安卓） <长按> 需要下载的壁纸，直到弹出选项菜单。 选择 <下载> 或 <保存图片>（iPhone 可能会显示 <添加到照片>）。 下载完成后，打开手机的 <相册/图库>，找到刚下载的壁纸。 iPhone 设置壁纸： 打开 <设置> > 进入 <墙纸> > 选择 <添加新墙纸> > 选择下载的壁纸 > 调整并设置。 安卓设置壁纸： 在相册中打开壁纸，点击右上角的 <菜单>（通常是<三点>图标），选择 <设为壁纸>，然后按照提示完成设置。 这样，你就可以成功下载并设置你喜欢的壁纸了！", "以下是可以帮助你设置壁纸的方法: 如果点击下载按钮后未能成功下载，可以尝试以下操作：  电脑端：右键点击图片，在弹出的菜单中选择<另存为>，即可将壁纸下载并保存到本地。 手机端：长按想要下载的动态壁纸或图片壁纸，待弹出菜单后选择<下载>，即可保存至设备。"],
+        
+        "详细":  ["以下是详细的壁纸下载与设置方法：  如果点击下载按钮后没有成功下载，可以根据设备类型尝试以下操作：  电脑端 将鼠标移动到想要下载的壁纸上。 <右键点击> 壁纸，弹出菜单。 在菜单中选择 <另存为> 或 <图片另存为> 选项。 选择存储位置（如<桌面>或<图片>文件夹），然后点击 <保存>。 下载完成后，找到刚保存的壁纸，在文件上 <右键点击>，选择 <设置为桌面背景>，即可更换壁纸。 手机端（iOS/安卓） <长按> 需要下载的壁纸，直到弹出选项菜单。 选择 <下载> 或 <保存图片>（iPhone 可能会显示 <添加到照片>）。 下载完成后，打开手机的 <相册/图库>，找到刚下载的壁纸。 iPhone 设置壁纸： 打开 <设置> > 进入 <墙纸> > 选择 <添加新墙纸> > 选择下载的壁纸 > 调整并设置。 安卓设置壁纸： 在相册中打开壁纸，点击右上角的 <菜单>（通常是<三点>图标），选择 <设为壁纸>，然后按照提示完成设置。 这样，你就可以成功下载并设置你喜欢的壁纸了！", "以下是可以帮助你设置壁纸的方法: 如果点击下载按钮后未能成功下载，可以尝试以下操作：  电脑端：右键点击图片，在弹出的菜单中选择<另存为>，即可将壁纸下载并保存到本地。 手机端：长按想要下载的动态壁纸或图片壁纸，待弹出菜单后选择<下载>，即可保存至设备。"],
+
+        "不":  ["以下是详细的壁纸下载与设置方法：  如果点击下载按钮后没有成功下载，可以根据设备类型尝试以下操作：  电脑端 将鼠标移动到想要下载的壁纸上。 <右键点击> 壁纸，弹出菜单。 在菜单中选择 <另存为> 或 <图片另存为> 选项。 选择存储位置（如<桌面>或<图片>文件夹），然后点击 <保存>。 下载完成后，找到刚保存的壁纸，在文件上 <右键点击>，选择 <设置为桌面背景>，即可更换壁纸。 手机端（iOS/安卓） <长按> 需要下载的壁纸，直到弹出选项菜单。 选择 <下载> 或 <保存图片>（iPhone 可能会显示 <添加到照片>）。 下载完成后，打开手机的 <相册/图库>，找到刚下载的壁纸。 iPhone 设置壁纸： 打开 <设置> > 进入 <墙纸> > 选择 <添加新墙纸> > 选择下载的壁纸 > 调整并设置。 安卓设置壁纸： 在相册中打开壁纸，点击右上角的 <菜单>（通常是<三点>图标），选择 <设为壁纸>，然后按照提示完成设置。 这样，你就可以成功下载并设置你喜欢的壁纸了！", "以下是可以帮助你设置壁纸的方法: 如果点击下载按钮后未能成功下载，可以尝试以下操作：  电脑端：右键点击图片，在弹出的菜单中选择<另存为>，即可将壁纸下载并保存到本地。 手机端：长按想要下载的动态壁纸或图片壁纸，待弹出菜单后选择<下载>，即可保存至设备。"],
+       
+        "谢谢": ["不用谢！有关于火狮壁纸网站的问题随时来找我！😊", "客气啦！有问题随时来找我！😊"],
+
+        "感谢": ["不用谢！有关于火狮壁纸网站的问题随时来找我！😊", "客气啦！有问题随时来找我！😊"],
+
+        "作者": ["可以在 抖音联系 火狮 HUOSHI 私信 一下", "好的 可以在 抖音联系 火狮 HUOSHI 私信 一下。"],
+
+        "谢": ["不用谢！有关于火狮壁纸网站的问题随时来找我！😊", "客气啦！有问题随时来找我！😊"],
+       
+        "好": ["好的！随时问我问题哦。😊", "好的！有关于火狮壁纸网站的问题随时来找我！😊"],
+
+        "拜": ["好的！再见 随时问我问题哦。😊", "拜拜！有关于火狮壁纸网站的问题随时来找我！😊"],
+
+        "再见": ["好的！再见 随时问我问题哦。😊", "拜拜！有关于火狮壁纸网站的问题随时来找我！😊"]
+    };
+
+    function sendMessage() {
+        const message = userInput.value.trim();
+        if (message === "") return;
+
+        addMessage("你", message, "user-message");
+
+        let response = "抱歉，这个问题可能需要去联系开发者 可以在 抖音联系 火狮 HUOSHI 私信 一下。";
+        for (const key in responses) {
+            if (message.includes(key)) {
+                let replies = responses[key];
+                response = replies[Math.floor(Math.random() * replies.length)];
+                break;
+            }
+        }
+
+        setTimeout(() => {
+            typeMessage("火狮(⁠ﾉ⁠ºヮ⁠º⁠)⁠ﾉ⁠ ⁠✧", response, "ai-message");
+        }, 1500);
+
+        userInput.value = "";
+    }
+
+    function addMessage(sender, text, className) {
+        const p = document.createElement("p");
+        p.className = className;
+        p.innerHTML = `<b>${sender}：</b> ${text}`;
+        chatBox.appendChild(p);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function typeMessage(sender, text, className) {
+    let index = 0;
+    const p = document.createElement("p");
+    p.className = className;
+    p.innerHTML = `<b>${sender}：</b> <span class="typing-dot">◉</span>`;
+    chatBox.appendChild(p);
+    const typingDot = p.querySelector(".typing-dot");
+
+    function type() {
+        if (index < text.length) {
+            typingDot.insertAdjacentText("beforebegin", text[index]);
+            index++;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            setTimeout(type, 50);
+        } else {
+            typingDot.remove();
+        }
+    }
+    type();
+}
+
+
+    // 监听 Enter 键发送消息
+    userInput.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+
+    // 快捷回复按钮功能（点击后隐藏按钮）
+    function quickReply(button, text) {
+        userInput.value = text;
+        sendMessage();
+        button.style.display = "none"; // 按钮点击后消失
+    }
+
+</script>
+
+
+</body>
+</html>
